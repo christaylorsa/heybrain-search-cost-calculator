@@ -518,6 +518,47 @@
         <p class="disclaimer">A scenario you chose, for illustration. It does not promise cash savings.</p>
       </section>
 
+      <section class="card scenario" aria-labelledby="tokens-title">
+        <div class="scenario-head">
+          <h2 id="tokens-title">Spend less on AI tokens</h2>
+          <span class="tag">Up to 45%</span>
+        </div>
+        <p class="help">When your AI tools start with the right company context, they spend fewer tokens looking for it. HeyBrain estimates token savings of up to 45%.</p>
+
+        <div class="field" data-field="tokens">
+          <div class="field-head">
+            <label for="tokens-num">Monthly AI token spend</label>
+            <div class="num num-wide"><span class="affix prefix" data-cur-symbol>$</span><input id="tokens-num" type="text" inputmode="decimal" autocomplete="off" aria-describedby="tokens-err tokens-help"><span class="affix suffix">/ month</span></div>
+          </div>
+          <input type="range" id="tokens-range" aria-label="Monthly AI token spend">
+          <div class="scale" aria-hidden="true"><span data-money="tokens:min"></span><span data-money="tokens:max"></span></div>
+          <p class="help" id="tokens-help">What your team spends on AI model usage each month, across tools and APIs.</p>
+          <p class="error" id="tokens-err" role="alert"></p>
+        </div>
+
+        <div class="field" data-field="tokencut">
+          <div class="field-head">
+            <label for="tokencut-num">Token savings</label>
+            <div class="num"><input id="tokencut-num" type="text" inputmode="numeric" autocomplete="off" aria-describedby="tokencut-err"><span class="affix suffix">%</span></div>
+          </div>
+          <input type="range" id="tokencut-range" aria-label="Token savings">
+          <div class="scale" aria-hidden="true"><span>0%</span><span>15%</span><span>30%</span><span>45%</span></div>
+          <p class="error" id="tokencut-err" role="alert"></p>
+        </div>
+
+        <div class="scenario-results" aria-live="polite">
+          <div class="s-stat">
+            <div class="stat-value" id="r-tok-month">$900</div>
+            <div class="stat-label">Saved on AI tokens each month.</div>
+          </div>
+          <div class="s-stat">
+            <div class="stat-value" id="r-tok-year">$10,800</div>
+            <div class="stat-label">Saved on AI tokens each year.</div>
+          </div>
+        </div>
+        <p class="disclaimer">An estimate for illustration. Actual savings depend on your AI tools and how your team uses them.</p>
+      </section>
+
       <section class="card download" aria-labelledby="dl-title">
         <h2 id="dl-title">Download your results</h2>
         <p class="help">A branded image of your estimate, ready to share with your team.</p>
@@ -549,6 +590,7 @@
         <li><strong>Estimated annual time cost</strong> <code class="f">annual hours × hourly employee cost</code></li>
         <li><strong>Equivalent working days</strong> <code class="f">annual hours ÷ 8</code>, counted as person-days across the whole team.</li>
         <li><strong>Hypothetical scenario</strong> <code class="f">annual hours × your reduction</code> and <code class="f">annual time cost × your reduction</code></li>
+        <li><strong>AI token savings</strong> <code class="f">monthly token spend × your token saving</code>, and <code class="f">× 12</code> for a year.</li>
       </ol>
       <p>The calculator keeps full precision and rounds only for display. It runs in your browser and does not send or store what you enter.</p>
     </details>

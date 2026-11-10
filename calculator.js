@@ -17,6 +17,9 @@
     cost:      {}, // filled from PAY_PERIODS for the selected period
     days:      { min: 1, max: 366,  def: 220, integer: true,  label: 'Working days' },
     reduction: { min: 0, max: 75,   def: 25,  integer: true,  curve: 1,   label: 'Reduction' },
+    // AI token spend is entered per month in the chosen currency; 45% is HeyBrain's stated upper estimate.
+    tokens:    { min: 0, max: 1000000, def: 2000, integer: false, curve: 3, sliderStep: 10, label: 'Monthly AI token spend' },
+    tokencut:  { min: 0, max: 45,   def: 45,  integer: true,  curve: 1,   label: 'Token savings' },
   };
   const SLIDER_RES = 1000;
   const HOURS_PER_DAY = 8;
@@ -130,7 +133,8 @@
     const cost = hours * hourly;
     const days8 = hours / HOURS_PER_DAY;
     const r = s.reduction / 100;
-    return { hours, hourly, cost, days8, recHours: hours * r, recValue: cost * r };
+    const tokenMonth = s.tokens * s.tokencut / 100;
+    return { hours, hourly, cost, days8, recHours: hours * r, recValue: cost * r, tokenMonth, tokenYear: tokenMonth * 12 };
   }
 
   // ---------- Slider mapping ----------
@@ -155,6 +159,8 @@
       case 'minutes': return `${fmtNum(v)} minutes a day`;
       case 'cost': return `${fmtMoney(v, { rate: true })} ${perText()}`;
       case 'reduction': return `${v}% reduction`;
+      case 'tokens': return `${fmtMoney(v)} a month`;
+      case 'tokencut': return `${v}% token savings`;
       default: return String(v);
     }
   }
@@ -347,6 +353,8 @@
     $('r-days').textContent = fmtNum(r.days8);
     $('r-rec-hours').textContent = fmtNum(r.recHours);
     $('r-rec-value').textContent = fmtMoney(r.recValue);
+    $('r-tok-month').textContent = fmtMoney(r.tokenMonth);
+    $('r-tok-year').textContent = fmtMoney(r.tokenYear);
     $('sticky-cost').textContent = fmtMoney(r.cost);
     $('zero-hint').hidden = r.hours !== 0;
 
@@ -355,6 +363,7 @@
 
     document.querySelectorAll('[data-cur-symbol]').forEach((el) => { el.textContent = currencySymbol(); });
     document.querySelectorAll('[data-cost-scale]').forEach((el) => { el.textContent = fmtMoney(FIELDS.cost[el.dataset.costScale], { rate: true }); });
+    document.querySelectorAll('[data-money]').forEach((el) => { const [k, end] = el.dataset.money.split(':'); el.textContent = fmtMoney(FIELDS[k][end]); });
     $('cost-equiv').textContent = equivText(r.hourly);
     document.querySelectorAll('[data-fmt]').forEach((el) => { el.textContent = nf({}).format(Number(el.dataset.fmt)); });
 
@@ -389,6 +398,10 @@
       recHours: fmtNum(r.recHours),
       recValue: fmtMoney(r.recValue),
       reduction: state.reduction,
+      tokenSpend: fmtMoney(state.tokens),
+      tokenYear: fmtMoney(r.tokenYear),
+      tokenPct: state.tokencut,
+      tokenShow: r.tokenYear > 0,
       zero: r.hours === 0,
       basis: [
         `${fmtNum(state.team)} ${state.team === 1 ? 'person' : 'people'}`,

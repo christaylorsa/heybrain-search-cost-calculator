@@ -254,6 +254,22 @@
     };
   }
 
+  function tokenBlock(ctx, x, w, d, o) {
+    if (!d.tokenShow) return null;
+    const tag = `AI TOKENS · ${d.tokenPct}% SAVED ON ${d.tokenSpend} A MONTH`;
+    const segs = [{ t: d.tokenYear, weight: 600 }, { t: 'saved on AI tokens a year.', weight: 400 }];
+    const lines = layoutRich(ctx, segs, o.text, w - o.pad * 2);
+    const h = o.pad + o.tag + o.gap + lines.length * o.lh + o.pad * 0.6;
+    return {
+      h,
+      draw(y) {
+        panel(ctx, x, y, w, h, o.r, 'rgba(15,26,51,0.24)', null);
+        drawTracked(ctx, tag, x + o.pad, y + o.pad + o.tag * 0.8, o.tag, C.ice);
+        drawRich(ctx, lines, x + o.pad, y + o.pad + o.tag + o.gap + o.text * 0.8, o.text, o.lh, C.white);
+      },
+    };
+  }
+
   // ---------- Layouts ----------
   function drawSquare(ctx, W, H, d) {
     const P = 88, CW = W - P * 2;
@@ -266,19 +282,30 @@
     drawTracked(ctx, COPY.tag, W - P, 74 + 30, 18, rgba(C.ice, 0.9), 'right');
 
     // Measure the main column, then centre it between the header and the basis line.
-    const bigMax = 156;
-    const bigSize = fitSize(ctx, d.cost, 600, bigMax, 40, CW, -0.04);
-    font(ctx, 400, 32, INTER, -0.01);
-    const subLines = wrap(ctx, d.zero ? COPY.subZero : COPY.sub, CW);
+    // Try roomier layouts first and step down until the column clears the basis line
+    // (long ZAR figures wrap the scenario line and need the tightest one).
+    const LEVELS = [
+      { bigMax: 156, gapA: 34, gapB: 36, bo: { pad: 26, tag: 17, text: 29, lh: 38, gap: 14, r: 20 }, between: 20 },
+      { bigMax: 136, gapA: 26, gapB: 26, bo: { pad: 26, tag: 17, text: 29, lh: 38, gap: 14, r: 20 }, between: 16 },
+      { bigMax: 120, gapA: 22, gapB: 22, bo: { pad: 22, tag: 16, text: 26, lh: 33, gap: 12, r: 18 }, between: 14 },
+    ];
+    const top = gTop + 28, bottom = gBot - 64;
     const statW = (CW - 20) / 2;
     const so = { pad: 26, value: 58, label: 23, lh: 30, gap: 14, r: 20 };
     const s1 = statPanel(ctx, P, 0, statW, d.hours, COPY.hoursLabel, so);
     const s2 = statPanel(ctx, P + statW + 20, 0, statW, d.days, COPY.daysLabel, so);
     const statH = Math.max(s1.h, s2.h);
-    const sc = scenarioBlock(ctx, P, CW, d, { pad: 26, tag: 17, text: 29, lh: 38, gap: 14, r: 20 });
-
-    const blocks = 22 + 30 + bigSize * 0.76 + 34 + subLines.length * 42 + 36 + statH + (sc ? 20 + sc.h : 0);
-    const top = gTop + 28, bottom = gBot - 74;
+    let L, bigSize, subLines, sc, tk, blocks;
+    for (L of LEVELS) {
+      bigSize = fitSize(ctx, d.cost, 600, L.bigMax, 40, CW, -0.04);
+      font(ctx, 400, 32, INTER, -0.01);
+      subLines = wrap(ctx, d.zero ? COPY.subZero : COPY.sub, CW);
+      sc = scenarioBlock(ctx, P, CW, d, L.bo);
+      tk = tokenBlock(ctx, P, CW, d, L.bo);
+      blocks = 22 + 30 + bigSize * 0.76 + L.gapA + subLines.length * 42 + L.gapB + statH + (sc ? L.between + sc.h : 0) + (tk ? L.between + tk.h : 0);
+      if (blocks <= bottom - top) break;
+    }
+    const { gapA, gapB } = L;
     let y = top + Math.max(0, (bottom - top - blocks) / 2);
 
     drawTracked(ctx, COPY.label, P, y + 18, 21, C.ice);
@@ -286,15 +313,16 @@
     font(ctx, 600, bigSize, INTER, -0.04);
     ctx.fillStyle = C.white; ctx.textAlign = 'left';
     ctx.fillText(d.cost, P - bigSize * 0.04, y + bigSize * 0.74);
-    y += bigSize * 0.76 + 34;
+    y += bigSize * 0.76 + gapA;
     font(ctx, 400, 32, INTER, -0.01);
     ctx.fillStyle = 'rgba(255,255,255,0.9)';
     subLines.forEach((l, i) => ctx.fillText(l, P, y + 26 + i * 42));
-    y += subLines.length * 42 + 36;
+    y += subLines.length * 42 + gapB;
     // statPanel captured y=0, so translate for drawing
     ctx.save(); ctx.translate(0, y); s1.draw(statH); s2.draw(statH); ctx.restore();
     y += statH;
-    if (sc) { y += 20; sc.draw(y); }
+    if (sc) { y += L.between; sc.draw(y); y += sc.h; }
+    if (tk) { y += L.between; tk.draw(y); }
 
     // Basis line sits just above the lower grid line.
     drawTracked(ctx, d.basis.join(' · ').toUpperCase(), P, gBot - 30, 16, 'rgba(255,255,255,0.74)', 'left', 0.08);
@@ -333,7 +361,8 @@
     const so = { pad: 20, value: 44, label: 17, lh: 23, gap: 10, r: 16 };
     const s1 = statPanel(ctx, RX, 0, RW, d.hours, COPY.hoursLabel, so);
     const s2 = statPanel(ctx, RX, 0, RW, d.days, COPY.daysLabel, so);
-    const rightH = s1.h + 14 + s2.h;
+    const tk = tokenBlock(ctx, RX, RW, d, { pad: 18, tag: 13, text: 19, lh: 26, gap: 10, r: 16 });
+    const rightH = s1.h + 14 + s2.h + (tk ? 14 + tk.h : 0);
 
     const top = gTop + 24, bottom = gBot - 24, avail = bottom - top;
     let y = top + Math.max(0, (avail - leftH) / 2);
@@ -353,6 +382,7 @@
     ctx.save(); ctx.translate(0, ry); s1.draw(); ctx.restore();
     ry += s1.h + 14;
     ctx.save(); ctx.translate(0, ry); s2.draw(); ctx.restore();
+    if (tk) { ry += s2.h + 14; tk.draw(ry); }
 
     // Footer: basis + note, site on the right
     drawTracked(ctx, d.basis.join(' · ').toUpperCase(), P, gBot + 36, 13, 'rgba(255,255,255,0.74)', 'left', 0.08);
