@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Search Cost Calculator | HeyBrain</title>
+<meta name="description" content="Estimate the value of the time your team spends searching documents, messages and tools for answers.">
+<meta name="theme-color" content="#F6F8FC">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --deep-from: #123FB8;
+    --deep-to: #1F58DB;
+    --blue: #2563EB;
+    --blue-hover: #1D4FD8;
+    --royal: #226BFD;
+    --sky: #46A5F9;
+    --soft: #7BC0F7;
+    --ice: #D7F6FF;
+    --navy: #0F1A33;
+    --slate: #56607A;
+    --bg: #F6F8FC;
+    --panel: #EAF1FF;
+    --line: #DCE4F2;
+    --panel-line: #CFDDFB;
+    --track: #DCE6FA;
+    --white: #FFFFFF;
+    --error: #B42318;
+    --radius: 20px;
+    --shadow: 0 1px 2px rgba(15, 26, 51, .04), 0 8px 28px rgba(15, 26, 51, .06);
+    --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    color-scheme: light;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    font-family: var(--font);
+    font-size: 16px;
+    line-height: 1.55;
+    color: var(--navy);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: "cv11", "ss01";
+  }
+  a { color: inherit; }
+  button, input { font: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid rgba(37, 99, 235, .45); outline-offset: 2px; border-radius: 6px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+
+  /* Light kit backdrop: pale panels + pixel-grid texture */
+  .backdrop {
+    position: absolute; inset: 0 0 auto 0; height: 560px; z-index: -1; overflow: hidden; pointer-events: none;
+    background:
+      radial-gradient(ellipse 60% 70% at 12% 0%, rgba(234, 241, 255, .95) 0%, rgba(234, 241, 255, 0) 70%),
+      radial-gradient(ellipse 50% 60% at 92% 10%, rgba(215, 246, 255, .7) 0%, rgba(215, 246, 255, 0) 70%);
+  }
+  .backdrop::after {
+    content: ""; position: absolute; inset: 0;
+    background-image: radial-gradient(rgba(37, 99, 235, .13) 1.2px, transparent 1.6px);
+    background-size: 14px 14px;
+    -webkit-mask-image: radial-gradient(ellipse 55% 75% at 85% 0%, #000 0%, transparent 70%);
+            mask-image: radial-gradient(ellipse 55% 75% at 85% 0%, #000 0%, transparent 70%);
+  }
+
+  /* Header */
+  .site-header { padding: 22px 0; }
+  .site-header .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .lockup { position: relative; display: block; flex: none; }
+  .lockup svg, .lockup img { position: absolute; display: block; }
+  .header-link {
+    font-size: 14px; font-weight: 500; text-decoration: none; color: var(--navy);
+    padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255,255,255,.7);
+    transition: border-color .15s, background .15s;
+  }
+  .header-link:hover { border-color: var(--panel-line); background: #fff; }
+
+  /* Intro */
+  .intro { padding: 36px 0 36px; max-width: 760px; }
+  .eyebrow, .mono-label {
+    font-family: var(--mono); font-weight: 500; font-size: 12px; letter-spacing: .14em; text-transform: uppercase;
+  }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px; color: var(--blue);
+    background: var(--panel); border: 1px solid var(--panel-line); padding: 5px 10px; border-radius: 999px;
+  }
+  .eyebrow::before { content: ""; width: 6px; height: 6px; border-radius: 1.5px; background: var(--blue); }
+  h1 {
+    font-size: clamp(34px, 5.2vw, 58px); line-height: 1.04; letter-spacing: -0.035em; font-weight: 600;
+    margin: 18px 0 16px; text-wrap: balance;
+  }
+  .lede { font-size: clamp(17px, 2vw, 20px); color: var(--slate); margin: 0; max-width: 560px; text-wrap: pretty; }
+
+  /* Layout */
+  .calc { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr); gap: 24px; align-items: start; padding-bottom: 56px; }
+  .card { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+  .inputs { padding: 28px; position: sticky; top: 20px; }
+  .card-title { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0 0 6px; }
+  .card-title h2 { font-size: 20px; letter-spacing: -0.02em; font-weight: 600; margin: 0; }
+  .text-btn {
+    background: none; border: 0; padding: 4px 2px; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--blue);
+  }
+  .text-btn:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+  /* Fields */
+  .field { padding: 22px 0; border-bottom: 1px solid var(--line); }
+  .field:last-of-type { border-bottom: 0; }
+  .field-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 14px; }
+  .field-head label { font-weight: 500; font-size: 15px; line-height: 1.35; }
+  .num {
+    display: flex; align-items: center; flex: none;
+    background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 0 12px; height: 44px;
+    transition: border-color .15s, box-shadow .15s, background .15s;
+  }
+  .num:focus-within { border-color: var(--blue); background: #fff; box-shadow: 0 0 0 4px rgba(37, 99, 235, .12); }
+  .num input {
+    width: 4.6ch; border: 0; background: transparent; outline: none; text-align: right;
+    font-weight: 600; font-size: 17px; font-variant-numeric: tabular-nums; padding: 0;
+  }
+  .num .affix { font-size: 14px; color: var(--slate); white-space: nowrap; }
+  .num .prefix { margin-right: 3px; font-weight: 600; color: var(--navy); font-size: 17px; }
+  .num .suffix { margin-left: 6px; }
+  .num-wide input { width: 7.2ch; }
+  .period { grid-template-columns: repeat(4, 1fr); margin-bottom: 16px; }
+  .period label { padding: 7px 4px; font-size: 13px; }
+  .equiv {
+    display: flex; align-items: center; gap: 8px; margin: 10px 0 0; padding: 9px 12px; border-radius: 10px;
+    background: var(--panel); border: 1px solid var(--panel-line); font-size: 14px; color: var(--navy); font-variant-numeric: tabular-nums;
+  }
+  .equiv:empty { display: none; }
+  .field.invalid .num { border-color: var(--error); box-shadow: 0 0 0 4px rgba(180, 35, 24, .1); }
+  .help { font-size: 14px; color: var(--slate); margin: 10px 0 0; }
+  .error { font-size: 14px; color: var(--error); margin: 8px 0 0; font-weight: 500; }
+  .error:empty { display: none; }
+  .scale { display: flex; justify-content: space-between; font-size: 12px; color: var(--slate); margin-top: 6px; font-variant-numeric: tabular-nums; }
+
+  /* Range */
+  input[type="range"] {
+    -webkit-appearance: none; appearance: none; width: 100%; height: 28px; margin: 0; background: transparent; cursor: pointer;
+    --pct: 0%;
+  }
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 6px; border-radius: 999px;
+    background: linear-gradient(to right, var(--blue) 0 var(--pct), var(--track) var(--pct) 100%);
+  }
+  input[type="range"]::-moz-range-track { height: 6px; border-radius: 999px; background: var(--track); }
+  input[type="range"]::-moz-range-progress { height: 6px; border-radius: 999px; background: var(--blue); }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 24px; height: 24px; margin-top: -9px; border-radius: 50%;
+    background: #fff; border: 2px solid var(--blue); box-shadow: 0 2px 8px rgba(18, 63, 184, .25);
+    transition: transform .12s;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 20px; height: 20px; border-radius: 50%; background: #fff; border: 2px solid var(--blue); box-shadow: 0 2px 8px rgba(18, 63, 184, .25);
+  }
+  input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.12); }
+  input[type="range"]:focus-visible { outline: none; }
+  input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 6px rgba(37, 99, 235, .2); }
+  input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 6px rgba(37, 99, 235, .2); }
+
+  /* Segmented currency control */
+  .segmented { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 4px; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; }
+  .segmented input { position: absolute; opacity: 0; pointer-events: none; }
+  .segmented label {
+    text-align: center; padding: 8px 4px; border-radius: 9px; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--slate);
+    transition: background .15s, color .15s, box-shadow .15s;
+  }
+  .segmented label .sym { color: inherit; opacity: .7; margin-right: 4px; }
+  .segmented input:checked + label { background: #fff; color: var(--navy); box-shadow: 0 1px 3px rgba(15, 26, 51, .12); }
+  .segmented input:focus-visible + label { outline: 3px solid rgba(37, 99, 235, .45); outline-offset: 1px; }
+  fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+  legend { padding: 0; font-weight: 500; font-size: 15px; margin-bottom: 12px; }
+
+  /* Assumptions */
+  details.assumptions { margin-top: 6px; border-top: 1px solid var(--line); }
+  details.assumptions summary {
+    list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 18px 0 2px; font-weight: 500; font-size: 15px;
+  }
+  details.assumptions summary::-webkit-details-marker { display: none; }
+  details.assumptions summary .chev { width: 18px; height: 18px; color: var(--slate); transition: transform .2s; flex: none; }
+  details.assumptions[open] summary .chev { transform: rotate(180deg); }
+  details.assumptions summary .current { font-weight: 400; color: var(--slate); font-size: 14px; margin-left: auto; }
+  details.assumptions .field { border-bottom: 0; padding-bottom: 4px; padding-top: 16px; }
+
+  /* Results */
+  .results-col { display: grid; gap: 20px; }
+  .result-hero {
+    position: relative; overflow: hidden; color: #fff; border-radius: var(--radius); padding: 30px;
+    background:
+      radial-gradient(ellipse 55% 45% at 10% 0%, rgba(70, 165, 249, .55) 0%, rgba(70, 165, 249, 0) 100%),
+      radial-gradient(ellipse 45% 40% at 95% 15%, rgba(174, 217, 252, .32) 0%, rgba(174, 217, 252, 0) 100%),
+      radial-gradient(ellipse 60% 45% at 75% 100%, rgba(34, 107, 253, .55) 0%, rgba(34, 107, 253, 0) 100%),
+      linear-gradient(160deg, var(--deep-from) 0%, var(--deep-to) 100%);
+    box-shadow: 0 18px 48px rgba(18, 63, 184, .22);
+  }
+  .result-hero::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image:
+      repeating-linear-gradient(to right, rgba(255,255,255,.16) 0 6px, transparent 6px 14px),
+      repeating-linear-gradient(to bottom, rgba(255,255,255,.16) 0 6px, transparent 6px 14px);
+    background-size: 100% 1px, 1px 100%;
+    background-position: 0 72px, calc(100% - 22px) 0;
+    background-repeat: no-repeat;
+  }
+  .result-hero::after {
+    content: ""; position: absolute; right: -40px; bottom: -40px; width: 320px; height: 240px; pointer-events: none;
+    background-image: radial-gradient(rgba(255,255,255,.22) 1.3px, transparent 1.8px);
+    background-size: 13px 13px;
+    -webkit-mask-image: radial-gradient(ellipse at 100% 100%, #000 0%, transparent 70%);
+            mask-image: radial-gradient(ellipse at 100% 100%, #000 0%, transparent 70%);
+  }
+  .result-hero > * { position: relative; z-index: 1; }
+  .result-hero .mono-label { color: var(--ice); }
+  .hero-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 30px; }
+  .hero-top .coord { font-family: var(--mono); font-size: 11px; color: rgba(255,255,255,.5); }
+  .big {
+    font-size: 76px; font-weight: 600; letter-spacing: -0.04em; line-height: 1; margin: 12px 0 10px;
+    font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden;
+  }
+  .big-sub { font-size: 17px; color: rgba(255,255,255,.88); margin: 0; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 26px; }
+  .stat { background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18); border-radius: 16px; padding: 16px 18px; min-width: 0; }
+  .stat-value { font-size: 32px; font-weight: 600; letter-spacing: -0.03em; line-height: 1.1; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; }
+  .stat-label { font-size: 14px; color: rgba(255,255,255,.85); margin-top: 4px; line-height: 1.4; }
+  .basis { font-size: 14px; color: rgba(255,255,255,.8); margin: 18px 0 0; font-variant-numeric: tabular-nums; }
+  .note {
+    display: flex; gap: 10px; align-items: flex-start; margin: 18px 0 0; padding: 14px 16px; border-radius: 14px;
+    background: rgba(15, 26, 51, .22); font-size: 15px; line-height: 1.5; color: #fff;
+  }
+  .note svg { flex: none; width: 18px; height: 18px; margin-top: 2px; opacity: .85; }
+  .zero-hint { font-size: 15px; color: var(--ice); margin: 10px 0 0; }
+  .zero-hint[hidden] { display: none; }
+
+  /* Scenario */
+  .scenario { padding: 28px; }
+  .scenario-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .scenario h2 { font-size: 22px; letter-spacing: -0.025em; font-weight: 600; margin: 0; }
+  .tag {
+    flex: none; font-family: var(--mono); font-weight: 500; font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--slate); border: 1px dashed #B9C6DE; padding: 4px 8px; border-radius: 6px; margin-top: 3px;
+  }
+  .scenario .help { margin-top: 8px; }
+  .scenario .field { padding: 20px 0 6px; border: 0; }
+  .scenario-results { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+  .s-stat { background: var(--panel); border: 1px solid var(--panel-line); border-radius: 16px; padding: 16px 18px; min-width: 0; }
+  .s-stat .stat-value { color: var(--navy); font-size: 28px; }
+  .s-stat .stat-label { color: var(--slate); }
+  .disclaimer { font-size: 14px; color: var(--slate); margin: 14px 0 0; }
+
+  /* Download */
+  .download { padding: 28px; }
+  .download h2 { font-size: 20px; letter-spacing: -0.02em; font-weight: 600; margin: 0 0 4px; }
+  .download .help { margin-top: 0; }
+  .dl-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 18px; }
+  .format { grid-template-columns: repeat(2, auto); }
+  .format label { padding: 8px 14px; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 46px; padding: 0 20px;
+    border-radius: 12px; border: 0; cursor: pointer; font-weight: 600; font-size: 15px; text-decoration: none; white-space: nowrap;
+    transition: background .15s, transform .1s, box-shadow .15s;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn-primary { background: var(--blue); color: #fff; box-shadow: 0 6px 16px rgba(37, 99, 235, .25); }
+  .btn-primary:hover { background: var(--blue-hover); }
+  .btn-primary[disabled] { opacity: .7; cursor: progress; }
+  .btn svg { width: 18px; height: 18px; }
+  .preview {
+    margin-top: 18px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: var(--panel);
+    line-height: 0;
+  }
+  .preview canvas { width: 100%; height: auto; display: block; }
+  .status { font-size: 14px; color: var(--slate); margin: 10px 0 0; min-height: 1.5em; }
+
+  /* Method */
+  .method { padding-bottom: 56px; }
+  .method details { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 0 24px; }
+  .method summary { cursor: pointer; padding: 20px 0; font-weight: 600; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .method summary::-webkit-details-marker { display: none; }
+  .method summary .chev { width: 18px; height: 18px; color: var(--slate); transition: transform .2s; }
+  .method details[open] summary .chev { transform: rotate(180deg); }
+  .method ol { margin: 0 0 8px; padding-left: 20px; color: var(--slate); }
+  .method li { margin-bottom: 8px; }
+  .method li strong { color: var(--navy); font-weight: 600; }
+  .method p { color: var(--slate); margin: 0 0 22px; font-size: 15px; }
+  code.f { font-family: var(--mono); font-size: 13px; background: var(--bg); border: 1px solid var(--line); padding: 1px 6px; border-radius: 6px; color: var(--navy); }
+
+  /* CTA */
+  .cta {
+    position: relative; overflow: hidden; color: #fff; border-radius: 28px; padding: 48px;
+    display: grid; grid-template-columns: 1.4fr 1fr; gap: 32px; align-items: center;
+    background:
+      radial-gradient(ellipse 50% 70% at 0% 0%, rgba(70, 165, 249, .5) 0%, rgba(70, 165, 249, 0) 100%),
+      radial-gradient(ellipse 50% 70% at 100% 100%, rgba(34, 107, 253, .6) 0%, rgba(34, 107, 253, 0) 100%),
+      linear-gradient(160deg, var(--deep-from) 0%, var(--deep-to) 100%);
+  }
+  .cta::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image: radial-gradient(rgba(255,255,255,.18) 1.3px, transparent 1.8px);
+    background-size: 14px 14px;
+    -webkit-mask-image: radial-gradient(ellipse 40% 90% at 100% 50%, #000 0%, transparent 70%);
+            mask-image: radial-gradient(ellipse 40% 90% at 100% 50%, #000 0%, transparent 70%);
+  }
+  .cta > * { position: relative; z-index: 1; }
+  .cta h2 { font-size: clamp(26px, 3.4vw, 38px); letter-spacing: -0.03em; line-height: 1.1; font-weight: 600; margin: 18px 0 12px; text-wrap: balance; }
+  .cta p { margin: 0; color: rgba(255,255,255,.88); font-size: 17px; max-width: 520px; }
+  .cta-actions { display: flex; flex-direction: column; gap: 12px; align-items: stretch; }
+  .btn-white { background: #fff; color: var(--deep-from); }
+  .btn-white:hover { background: var(--ice); }
+  .btn-ghost { background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(255,255,255,.35); }
+  .btn-ghost:hover { background: rgba(255,255,255,.18); }
+
+  .site-footer { padding: 32px 0 48px; font-size: 13px; color: var(--slate); }
+  .site-footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+
+  /* Mobile sticky summary */
+  .sticky-sum {
+    position: fixed; left: calc(12px + env(safe-area-inset-left, 0px)); right: calc(12px + env(safe-area-inset-right, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 20; display: none;
+    align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-radius: 16px; color: #fff; text-decoration: none;
+    background: linear-gradient(160deg, var(--deep-from), var(--deep-to)); box-shadow: 0 12px 32px rgba(18, 63, 184, .35);
+    transform: translateY(140%); transition: transform .25s ease;
+  }
+  .sticky-sum.show { transform: translateY(0); }
+  .sticky-sum .mono-label { font-size: 10px; color: var(--ice); display: block; }
+  .sticky-sum strong { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .sticky-sum .go { font-size: 13px; font-weight: 500; white-space: nowrap; opacity: .9; }
+
+  @media (max-width: 960px) {
+    .calc { grid-template-columns: 1fr; }
+    .inputs { position: static; }
+    .cta { grid-template-columns: 1fr; padding: 36px 28px; }
+    .sticky-sum { display: flex; }
+  }
+  @media (max-width: 560px) {
+    .wrap { padding: 0 16px; }
+    .intro { padding: 20px 0 28px; }
+    .inputs, .scenario, .download { padding: 22px 20px; }
+    .result-hero { padding: 24px 20px; }
+    .result-hero::before { background-position: 0 60px, calc(100% - 16px) 0; }
+    .hero-top { margin-bottom: 36px; }
+    details.assumptions summary { flex-wrap: wrap; row-gap: 2px; }
+    details.assumptions summary .current { order: 3; flex-basis: 100%; margin-left: 0; }
+    .scenario-head { flex-direction: column-reverse; align-items: flex-start; gap: 10px; }
+    .scenario-head .tag { margin-top: 0; }
+    .stats, .scenario-results { grid-template-columns: 1fr; }
+    .stat-value { font-size: 30px; }
+    .field-head { align-items: flex-start; flex-direction: column; gap: 10px; }
+    .field-head .num { align-self: stretch; }
+    .num input { flex: 1; text-align: left; }
+    .segmented label .sym { display: none; }
+    .header-link { padding: 8px 12px; font-size: 13px; }
+    .method details { padding: 0 18px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="backdrop" aria-hidden="true"></div>
+
+<header class="site-header">
+  <div class="wrap">
+    <a href="https://heybrain.io/?utm_source=search_cost_calculator&amp;utm_medium=lead_magnet&amp;utm_campaign=search_cost_calculator" aria-label="HeyBrain home">
+      <span class="lockup" data-lockup="ink" data-height="30"></span>
+    </a>
+    <a class="header-link" href="https://heybrain.io/?utm_source=search_cost_calculator&amp;utm_medium=lead_magnet&amp;utm_campaign=search_cost_calculator">About HeyBrain</a>
+  </div>
+</header>
+
+<main>
+  <section class="wrap">
+    <div class="intro">
+      <span class="eyebrow">Search cost calculator</span>
+      <h1>How much is searching for answers costing your team?</h1>
+      <p class="lede">A few minutes here. A missing document there. See what it adds up to.</p>
+    </div>
+  </section>
+
+  <section class="wrap calc" aria-label="Calculator">
+    <!-- Inputs -->
+    <form class="card inputs" id="inputs" novalidate onsubmit="return false">
+      <div class="card-title">
+        <h2>Your team</h2>
+        <button type="button" class="text-btn" id="reset">Reset</button>
+      </div>
+
+      <div class="field" data-field="team">
+        <div class="field-head">
+          <label for="team-num">Team members</label>
+          <div class="num"><input id="team-num" type="text" inputmode="numeric" autocomplete="off" aria-describedby="team-err"><span class="affix suffix">people</span></div>
+        </div>
+        <input type="range" id="team-range" aria-label="Team members">
+        <div class="scale" aria-hidden="true"><span>1</span><span data-fmt="1000">1,000</span></div>
+        <p class="error" id="team-err" role="alert"></p>
+      </div>
+
+      <div class="field" data-field="minutes">
+        <div class="field-head">
+          <label for="minutes-num">Minutes spent searching per person, per working day</label>
+          <div class="num"><input id="minutes-num" type="text" inputmode="decimal" autocomplete="off" aria-describedby="minutes-err minutes-help"><span class="affix suffix">min</span></div>
+        </div>
+        <input type="range" id="minutes-range" aria-label="Minutes spent searching per person per working day">
+        <div class="scale" aria-hidden="true"><span>0</span><span>1 hr</span><span>2 hr</span><span>3 hr</span></div>
+        <p class="help" id="minutes-help">Looking through documents, chats, inboxes and tools, or waiting on a colleague to reply.</p>
+        <p class="error" id="minutes-err" role="alert"></p>
+      </div>
+
+      <div class="field">
+        <fieldset>
+          <legend>Currency</legend>
+          <div class="segmented" id="currency" role="radiogroup">
+            <input type="radio" name="currency" id="cur-USD" value="USD" checked><label for="cur-USD"><span class="sym">$</span>USD</label>
+            <input type="radio" name="currency" id="cur-GBP" value="GBP"><label for="cur-GBP"><span class="sym">£</span>GBP</label>
+            <input type="radio" name="currency" id="cur-EUR" value="EUR"><label for="cur-EUR"><span class="sym">€</span>EUR</label>
+            <input type="radio" name="currency" id="cur-ZAR" value="ZAR"><label for="cur-ZAR"><span class="sym">R</span>ZAR</label>
+          </div>
+        </fieldset>
+        <p class="help">Changes the symbol and number format only. Your amounts stay as entered.</p>
+      </div>
+
+      <div class="field" data-field="cost">
+        <div class="segmented period" id="period" role="radiogroup" aria-label="Pay period">
+          <input type="radio" name="period" id="per-hourly" value="hourly"><label for="per-hourly">Hourly</label>
+          <input type="radio" name="period" id="per-daily" value="daily"><label for="per-daily">Daily</label>
+          <input type="radio" name="period" id="per-monthly" value="monthly" checked><label for="per-monthly">Monthly</label>
+          <input type="radio" name="period" id="per-yearly" value="yearly"><label for="per-yearly">Yearly</label>
+        </div>
+        <div class="field-head">
+          <label for="cost-num" id="cost-label">Average monthly employee cost</label>
+          <div class="num num-wide"><span class="affix prefix" data-cur-symbol>$</span><input id="cost-num" type="text" inputmode="decimal" autocomplete="off" aria-describedby="cost-err cost-help cost-equiv"><span class="affix suffix" id="cost-suffix">/ month</span></div>
+        </div>
+        <input type="range" id="cost-range" aria-label="Average monthly employee cost">
+        <div class="scale" aria-hidden="true"><span data-cost-scale="min"></span><span data-cost-scale="max"></span></div>
+        <p class="help" id="cost-help">This can include salary, benefits and overhead. Salary alone gives a more cautious estimate.</p>
+        <p class="equiv" id="cost-equiv"></p>
+        <p class="error" id="cost-err" role="alert"></p>
+      </div>
+
+      <details class="assumptions" id="assumptions">
+        <summary>
+          Adjust assumptions
+          <span class="current" id="days-current">220 working days a year</span>
+          <svg class="chev" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M5 7.5l5 5 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </summary>
+        <div class="field" data-field="days">
+          <div class="field-head">
+            <label for="days-num">Working days per year</label>
+            <div class="num"><input id="days-num" type="text" inputmode="numeric" autocomplete="off" aria-describedby="days-err days-help"><span class="affix suffix">days</span></div>
+          </div>
+          <p class="help" id="days-help">We assume 220 working days a year, after weekends, public holidays and leave. Enter 1 to 366.</p>
+          <p class="error" id="days-err" role="alert"></p>
+        </div>
+      </details>
+    </form>
+
+    <!-- Results -->
+    <div class="results-col">
+      <section class="result-hero" id="results" aria-labelledby="hero-label" aria-live="polite" aria-atomic="false">
+        <div class="hero-top">
+          <span class="mono-label" id="hero-label">Estimated annual time cost</span>
+          <span class="coord" aria-hidden="true">112</span>
+        </div>
+        <div class="big" id="r-cost">$75,000</div>
+        <p class="big-sub">The value of your team's time spent searching for answers each year.</p>
+        <p class="zero-hint" id="zero-hint" hidden>With no search time entered, there is nothing to add up yet.</p>
+
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-value" id="r-hours">2,200</div>
+            <div class="stat-label">Team hours a year spent searching.</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value" id="r-days">275</div>
+            <div class="stat-label">Equivalent 8-hour working days, as combined person-days across the team.</div>
+          </div>
+        </div>
+
+        <p class="basis" id="r-basis">20 people × 30 min a day × 220 working days × $5,000 a month</p>
+
+        <p class="note">
+          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="8.25" stroke="currentColor" stroke-width="1.5"/><path d="M10 9v5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="6.25" r="1" fill="currentColor"/></svg>
+          <span>This estimates the value of employee time, not a direct cash expense or guaranteed saving.</span>
+        </p>
+      </section>
+
+      <section class="card scenario" aria-labelledby="scenario-title">
+        <div class="scenario-head">
+          <h2 id="scenario-title">What if you reduced that time?</h2>
+          <span class="tag">Hypothetical</span>
+        </div>
+        <p class="help">Choose a reduction to see what that share of search time is worth. You set this number. It is not a measured HeyBrain result.</p>
+
+        <div class="field" data-field="reduction">
+          <div class="field-head">
+            <label for="reduction-num">Reduction in search time</label>
+            <div class="num"><input id="reduction-num" type="text" inputmode="numeric" autocomplete="off" aria-describedby="reduction-err"><span class="affix suffix">%</span></div>
+          </div>
+          <input type="range" id="reduction-range" aria-label="Reduction in search time">
+          <div class="scale" aria-hidden="true"><span>0%</span><span>25%</span><span>50%</span><span>75%</span></div>
+          <p class="error" id="reduction-err" role="alert"></p>
+        </div>
+
+        <div class="scenario-results" aria-live="polite">
+          <div class="s-stat">
+            <div class="stat-value" id="r-rec-hours">550</div>
+            <div class="stat-label">Potential hours recovered a year.</div>
+          </div>
+          <div class="s-stat">
+            <div class="stat-value" id="r-rec-value">$18,750</div>
+            <div class="stat-label">Value of that recovered time.</div>
+          </div>
+        </div>
+        <p class="disclaimer">A scenario you chose, for illustration. It does not promise cash savings.</p>
+      </section>
+
+      <section class="card download" aria-labelledby="dl-title">
+        <h2 id="dl-title">Download your results</h2>
+        <p class="help">A branded image of your estimate, ready to share with your team.</p>
+        <div class="dl-row">
+          <div class="segmented format" role="radiogroup" aria-label="Image format">
+            <input type="radio" name="format" id="fmt-square" value="square" checked><label for="fmt-square">Square</label>
+            <input type="radio" name="format" id="fmt-landscape" value="landscape"><label for="fmt-landscape">Landscape</label>
+          </div>
+          <button type="button" class="btn btn-primary" id="download">
+            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 3v10m0 0l-4-4m4 4l4-4M4 16h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Download PNG
+          </button>
+        </div>
+        <div class="preview"><canvas id="preview" role="img" aria-label="Preview of the results image"></canvas></div>
+        <p class="status" id="dl-status" role="status"></p>
+      </section>
+    </div>
+  </section>
+
+  <section class="wrap method">
+    <details>
+      <summary>
+        How this is calculated
+        <svg class="chev" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M5 7.5l5 5 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </summary>
+      <ol>
+        <li><strong>Annual team hours searching</strong> <code class="f">team members × minutes per day ÷ 60 × working days</code></li>
+        <li><strong>Hourly employee cost</strong> from the pay you enter: <code class="f">daily ÷ 8</code>, <code class="f">monthly × 12 ÷ (working days × 8)</code> or <code class="f">yearly ÷ (working days × 8)</code>.</li>
+        <li><strong>Estimated annual time cost</strong> <code class="f">annual hours × hourly employee cost</code></li>
+        <li><strong>Equivalent working days</strong> <code class="f">annual hours ÷ 8</code>, counted as person-days across the whole team.</li>
+        <li><strong>Hypothetical scenario</strong> <code class="f">annual hours × your reduction</code> and <code class="f">annual time cost × your reduction</code></li>
+      </ol>
+      <p>The calculator keeps full precision and rounds only for display. It runs in your browser and does not send or store what you enter.</p>
+    </details>
+  </section>
+
+  <section class="wrap" style="padding-bottom: 24px;">
+    <div class="cta">
+      <div>
+        <span class="lockup" data-lockup="white" data-height="26"></span>
+        <h2>Give your team one place to find answers</h2>
+        <p>HeyBrain connects your company's documents, conversations and tools into one governed company brain. Your team and your AI agents get answers with sources, under the permissions you set.</p>
+      </div>
+      <div class="cta-actions">
+        <a class="btn btn-white" href="https://heybrain.io/signup?utm_source=search_cost_calculator&amp;utm_medium=lead_magnet&amp;utm_campaign=search_cost_calculator">Start for free</a>
+        <a class="btn btn-ghost" href="https://calendly.com/ceo-heybrain/demo?utm_source=search_cost_calculator&amp;utm_medium=lead_magnet&amp;utm_campaign=search_cost_calculator" target="_blank" rel="noopener">Book a demo</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <span>© HeyBrain. Estimates are for illustration only.</span>
+    <a href="https://heybrain.io/?utm_source=search_cost_calculator&amp;utm_medium=lead_magnet&amp;utm_campaign=search_cost_calculator">heybrain.io</a>
+  </div>
+</footer>
+
+<a class="sticky-sum" id="sticky-sum" href="#results" aria-hidden="true" tabindex="-1">
+  <span><span class="mono-label">Estimated annual time cost</span><strong id="sticky-cost">$75,000</strong></span>
+  <span class="go">See results ↓</span>
+</a>
+
+<script src="brand-assets.js"></script>
+<script src="results-image.js"></script>
+<script src="calculator.js"></script>
+</body>
+</html>
